@@ -1,5 +1,4 @@
 NIST 800-88 Drive Sanitization Tool version 1.1
-info@freeway-insurance.com
 Created by Ray Morris
 
 -- Purpose this tool --
@@ -11,6 +10,28 @@ Drive sanitizing should be done before disposing of a hard drive / computer, and
 giving a computer to a different employee of a different security group.
 
 This tool supports ATA, SATA, and nvme drives, including drives using M.2 connectors.
+
+--- Installation ---
+
+The easiest way to use the tool is to download the prebuilt boot image here:
+https://super-drive-wipe.s3.amazonaws.com/wipe_drives_1.2.rar
+
+The included ImageWriter.exe is one way to burn the image to a USB flash drive 
+in Windows. The .img in the zip file should be burned to a USB flash drive or 
+other disk. It cannot be simply copied as a file, but needs to be burned as an image.
+
+Burning this drive wipe tool to a drive will destroy any existing data on the 
+flash drive.
+
+The included liveusb-creator.zip can also be used instead to burn the image to
+a flash drive. Just unzip liveusb-creator.zip and run the exe.
+
+From Linux or Mac, the image can be burned to a flash drive with a command such as:
+dd if=disk_wipe.img bs=1M of=/dev/sdX
+
+Where sdX is the new flash drive. be very careful to choose the correct drive, as dd
+WILL wipe all data from the destination!
+
 
 --- USAGE ---
 
@@ -30,33 +51,16 @@ On most SSDs, sanitization will take about 60 seconds or so. Rotating magnetic m
 take hours.
 
 
--- Copying / installing this tool --
+-- Copying this tool --
 
 The easiest way to copy this bootable USB drive to use one copy of this bootable flash 
 drive to create a copy of itself. Simply boot from this existing drive and select 
 the menu option to make another copy. The new flash drive on which you are installing
 must be at least 1GB.
 
-If you don't have a bootable drive with this tool yet, the included ImageWriter.exe 
-is one way to burn the image to a USB flash drive in Windows. The .img in the zip 
-file should be burned to a USB flash drive or other disk.  Tt cannot be simply 
-copied as a file, but needs to be burned as an image.
-
-Burning this drive wipe tool to a drive will destroy any existing data on the 
-flash drive.
-
-The included liveusb-creator.zip can also be used instead to burn the image to
-a flash drive. Just unzip liveusb-creator.zip and run the exe.
-
-From Linux or Mac, the image can be burned to a flash drive with a command such as:
-dd if=disk_wipe.img bs=1M of=/dev/sdX
-
-Where sdX is the new flash drive. be very careful to choose the correct drive, as dd
-WILL wipe all data from the destination!
-
 
 -- Support and customizations for this tool --
-This tool is supported by infosec@confie.com or deepmagicbeginshere@gmail.com
+This tool is created by deepmagicbeginshere@gmail.com
 
 It consists of a Linux installation on the thumb drive which runs /usr/local/bin/wipe_drives on boot.
 This Linux uses the kernel and initrd from CentOS 7, but does not have RPM and yum.
@@ -65,6 +69,4 @@ The wipe script itself may also be edited from Windows by using Notepad, it exis
 in the Windows-accessible partition.
 Additionally, updates can be performed by writing a shell script to the "update.txt" file.
 That file will be run on each boot.
-
-If needed, Infosec staff may contact deepmagicbeginshere@gmail.com for further information.
 
