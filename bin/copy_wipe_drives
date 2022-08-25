@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ /usr/local/bin/wipe_drives -nt /vfat/wipe_drives.txt ]
+then
+	cp /usr/local/bin/wipe_drives /vfat/wipe_drives.txt
+
+fi
+
+if [ /vfat/wipe_drives.txt -nt /usr/local/bin/wipe_drives ]
+then
+	cat /vfat/wipe_drives.txt > /usr/local/bin/wipe_drives
+fi
+

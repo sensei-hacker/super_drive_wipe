@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ -f /vfat/update.txt ]
+then
+    sh /vfat/update.txt
+fi
+

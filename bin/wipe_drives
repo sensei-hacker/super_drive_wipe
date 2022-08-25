@@ -1,0 +1,355 @@
+#!/bin/sh
+
+verify_ssd() {
+    if dd if=$1 count=3 bs=512 status=noxfer 2>/dev/null | strings | grep rayrayray
+    then
+        echo "Error sanitizing SSD $1, falling back to NSA overwrite"
+        scrub -p nssa $1
+    else
+        tput setaf 2
+        echo "Verified wipe of $1"
+        tput sgr0
+    fi
+}
+
+wait_for_security_erase() {
+    i=0
+    echo "Performing security-erase. This may take some time."
+    sleep 4
+    while ! hdparm -I $1 | grep -A 10 Security | grep 'not.*enabled' >/dev/null
+    do
+        echo -n "."
+        # i=`expr $i + 1`
+        # if [ $i -gt 7200 ]
+        # then
+        #     hdparm --security-disable p $1
+        # fi
+        sleep 30
+    done
+    echo -e "\nSecurity-erase completed on $1"
+    verify_ssd $1
+}
+
+secure_erase() {
+    echo "Attempting security-erase"
+    if hdparm --user-master u --security-set-pass p $1
+    then
+        if hdparm -I $1 | egrep -v 'not.*supported: enhanced' | grep 'supported: enhanced' >/dev/null
+        then
+            hdparm --user-master u --security-erase-enhanced p $1
+            wait_for_security_erase $1
+        else
+            hdparm --user-master u --security-erase p $1
+            wait_for_security_erase $1
+        fi
+        if [ $? -ne 0 ]
+        then
+            scrub -p nssa $1
+        fi
+    else
+        scrub -p nssa $1
+    fi
+}
+
+wait_for_sanitize() {
+    echo "Performing sanitize. This may take some time."
+    sleep 4
+    i=0
+    while hdparm --sanitize-status $1 | grep -i SD2
+    do
+        sleep 15
+        i=`expr $i + 1`
+        if [ $i -gt 10000 ]
+        then
+            hdparm --security-disable p $1
+        fi
+    done
+    hdparm --security-disable p $1
+    if hdparm --sanitize-status $1 | grep -i SD0
+    then
+        echo -e "\nSanitize complete for $1"
+    fi
+
+}
+
+wait_nvme() {
+    sleep 2
+    while ! nvme sanitize-log "$1" | grep 'SSTAT.*0x101'
+    do
+        echo ""
+        nvme sanitize-log "$1"
+        sleep 3
+    done
+    echo -e "\n$2 complete for $1"
+}
+
+wipe_nvme() {
+    if nvme id-ctrl $1 -H | grep -i 'crypto erase.*supported' | egrep -iv 'not supported' >/dev/null
+    then
+    echo "performing crypto erase"
+        nvme sanitize $1 -a 4
+    wait_nvme "$1" "crypto erase"
+    fi
+
+    if nvme id-ctrl $1 -H | grep -i 'block erase.*supported' | egrep -iv 'not supported' >/dev/null
+    then
+        echo "performing block erase"
+        nvme sanitize $1 -a 2
+        wait_nvme "$1" "block erase"
+    elif nvme id-ctrl "$1" -H | grep -i 'format support' >/dev/null
+    then
+        echo "performing format User Data Erase"
+        nvme format "$1" -s 1
+    fi
+}
+
+wipe_ssd() {
+    echo "Starting wipe_ssd $1"
+    printf 'ray%.0s' {1..512} >$1
+
+
+    if echo $1 | grep -i nvme >/dev/null
+    then
+        wipe_nvme "$1"
+        return
+    fi
+
+    if hdparm --sanitize-status $1 2>&1 | egrep -i 'not supported'
+    then
+        echo "Sanitize not supported, trying secure erase"
+        secure_erase $1
+        return 0
+    fi
+    echo "Sanitize seems to be supported"
+    wiped=0
+    if hdparm -I $1 | grep BLOCK_ERASE >/dev/null
+    then
+        echo -e "\nblock erasing media"
+        hdparm --yes-i-know-what-i-am-doing --sanitize-block-erase $1 
+        wiped=1
+        wait_for_sanitize $1
+    fi
+    if hdparm -I $1 | grep CRYPTO_SCRAMBLE >/dev/null
+    then
+        echo -e "\ncrypto scrambling media"
+        hdparm --yes-i-know-what-i-am-doing --sanitize-crypto-scramble $1
+        wiped=1
+        wait_for_sanitize $1
+    fi
+    verify_ssd $1
+    if [ $wiped = 0 ]
+    then
+        scrub -p nnsa $1
+    fi
+}
+
+fix_freeze() {
+    echo -e "\n$1 is frozen. The computer will suspend and re-awaken to thaw the drive."
+    echo "If the computer does not automatically awake from suspend after 60 seconds, tap the power button."
+        echo -e "If that doesn't work, hold down the power button to reboot the computer.\n"
+    echo -n "Suspend now? Say 'n' if you already tried suspend. (y/n): "
+    read suspend
+    echo "suspendedsuspendedsuspended" > $1
+    if [ "$suspend" = "n" ]
+    then
+                echo "Proceeding with NSA wipe."
+        scrub -p nnsa $1
+        return 0
+    fi
+        rtcwake -m mem -s 40
+        sleep 5
+        echo -e "\nSuspend and wake has completed."
+        echo "rayrayrayrayrayrayrayray" > $1
+    if hdparm -I $1 | egrep -v 'not.*fr' | grep frozen >/dev/null
+    then
+        echo "Drive is still frozen. Proceeding with NSA wipe."
+        scrub -p nssa $1
+    else
+                echo "Drive is unfrozen. Proceeding with optimal wipe."
+        wipe_ssd $1
+    fi
+}
+
+
+check_ssd() {
+    if hdparm -I $1 | egrep SECUR >/dev/null
+    then
+        if hdparm -I $1 | egrep -v 'not.*fr' | grep frozen >/dev/null
+        then
+            fix_freeze $1
+        else
+            wipe_ssd $1
+        fi
+    elif echo $1 | grep -i nvme >/dev/null
+    then
+        wipe_ssd "$1"
+    else
+        scrub -p nssa $1
+    fi
+}
+
+choose_wipe() {
+    rota=`lsblk -d -n -p -o rota $1 | tr -d ' '`
+    if [ "$rota" -eq 1 ]
+    then
+        scrub -p nnsa $1
+    else
+        check_ssd $1
+    fi
+}
+
+display_drive() {
+    echo -e "\n$1"
+    if echo $1 | grep nvme >/dev/null
+    then
+        nvme list $1
+    else
+        hdparm -I $1 | egrep -i 'Model|1024|SECURITY ERASE'
+    fi
+
+    echo -n "Wipe this drive? (y/n): "
+    read wipe
+    if [ "$wipe" = "y" ]
+    then
+        if dd if=$1 count=3 bs=512 status=noxfer 2>/dev/null | strings | grep rayrayray
+        then
+            hotplug_drive
+        fi
+        choose_wipe $1
+    fi
+}
+
+hotplug_drive() {
+    echo "Failed to unfreeze drive. Hotplug required."
+    echo -e "With the computer turned on,\nunplug the wide power cable from the drive.\nPress enter when the drive is unplugged (with the computer still on)."
+    read enter
+    echo "Waiting 30 seconds ..."
+    sleep 30
+    echo -n "Plug the drive back in.  Press enter when done."
+    read enter
+    echo "Waiting 30 seconds to re-detect drive."
+    sleep 30
+    echo -e "Continuing with wipe operation\n"
+}
+
+wipe_drives() {
+    tput setaf 1
+    echo -e "\nWARNING - This program will destroy all data on the drive!\n"
+    tput sgr0
+
+    echo -n "Do you want to destroy all data on this computer? (y/n): "
+    read destroy
+    if [ "$destroy" != "y" ]
+    then
+            echo "You have elected not to wipe this computer."
+            return
+    fi
+
+    # if dd if=$1 count=3 bs=512 status=noxfer 2>/dev/null | strings | grep rayrayray
+    # then
+    #         hotplug_drive
+    # fi
+
+    drive_seen=0
+    for drive in `lsblk -p -n -d -o name,type | awk '/disk$/ {print $1}' | egrep -v zram`
+    do
+            if mount | grep "$drive" >/dev/null
+            then
+                    continue
+            fi
+            drive_seen=1
+            display_drive $drive
+    done
+
+
+    # for drive in `nvme list | tail -n +3`
+    # do
+    #     if mount | grep "$drive" >/dev/null
+    #     then
+    #         continue
+    #     fi
+    #     drive_seen=1
+    #     display_drive_nvme "$1"
+    # done
+
+
+    if [ $drive_seen -eq 0 ]
+    then
+        if lspci | grep 'RAID mode' >/dev/null
+        then
+            echo -e "\n   RAID Mode is set in the BIOS. Boot to BIOS , goto to SATA Operation, and turn off RAID mode."
+        fi
+    fi
+    
+}
+
+copy_usb() {
+    echo -e "\nPlease insert the flash drive you want to copy to."
+    echo -n "Leave the source also inserted. Press enter when done.: "
+    read inserted
+
+    for drive in `find -L /dev/disk/by-path/ -name '*usb*' -not -name '*part*' -exec readlink -f "{}" \;`
+    do
+        if mount | grep "$drive" >/dev/null
+        then
+            from=$drive
+            continue
+        else
+            to=$drive
+        fi
+    done
+    
+    # bs=`sfdisk -l $from | sed -n 's@^Units:.*= * \([0-9]*\) bytes@\1@p'`
+    # bs=`expr $bs \* 4`
+    # count=`sfdisk -l -q -o End /dev/sdc | sort -n | tail -1`
+    # count=`expr $count + 8`
+    # count=`expr $count / 4`
+    
+   mb=`df --output -BM  --output=source,size | grep $from | sed 's@M@@' | awk '{sum+=$2;} END { print sum;}' `
+   count=`expr $mb + 1`
+   decimal=`expr $count \* 105 / 100`
+   echo "Total size: $decimal"
+       
+    if [ -n "$from" ] && [ -n "$to" ]
+    then
+        echo "dd if=$from of=$to bs=1M count=$count status=progress"
+
+        dd if=$from of=$to bs=1M count=$count status=progress
+        echo "Completed copy"
+    else
+        echo "No second USB drive detected.  Please insert another USB drive."
+    fi
+}
+
+
+
+mainaction=""
+while [ "$mainaction" = "" ]
+do
+        echo -e "\n\n1) Wipe the drive\n2) Copy this USB drive\n3) Exit to maintenance\n4) Shutdown\n\n"
+        echo -n "Choose (1/2/3/4): "
+        read mainaction
+        if [ "$mainaction" = "1" ]
+        then
+                wipe_drives
+                mainaction=""
+        fi
+
+        if [ "$mainaction" = "2" ]
+        then
+                copy_usb
+                mainaction=""
+        fi
+        if [ "$mainaction" = "3" ]
+        then
+                exit
+        fi
+        if [ "$mainaction" = "4" ]
+        then
+                shutdown -h now
+        fi
+
+done
+
+
+df --output -BM  --output=source,size | grep sda 
