@@ -14,7 +14,7 @@ This tool supports ATA, SATA, and nvme drives, including drives using M.2 connec
 --- Installation ---
 
 The easiest way to use the tool is to download the prebuilt boot image here:
-https://super-drive-wipe.s3.amazonaws.com/wipe_drives.rar
+https://super-drive-wipe.s3.amazonaws.com/super-drive-wipe.rar
 
 The included ImageWriter.exe is one way to burn the image to a USB flash drive 
 in Windows. The .img file in the zip file should be burned to a USB flash
