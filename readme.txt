@@ -17,7 +17,7 @@ The easiest way to use the tool is to download the prebuilt boot image here:
 https://super-drive-wipe.s3.amazonaws.com/wipe_drives.rar
 
 The included ImageWriter.exe is one way to burn the image to a USB flash drive 
-in Windows. The .img.vhd file in the zip file should be burned to a USB flash
+in Windows. The .img file in the zip file should be burned to a USB flash
 drive or other disk. It cannot be simply copied as a file, but needs to be burned
 as an image.
 
@@ -28,7 +28,7 @@ The included liveusb-creator.zip can also be used instead to burn the image to
 a flash drive. Just unzip liveusb-creator.zip and run the exe.
 
 From Linux or Mac, the image can be burned to a flash drive with a command such as:
-dd if=disk_wipe.img.vhd bs=1M of=/dev/sdX
+dd if=disk_wipe.img bs=1M of=/dev/sdX
 
 Where sdX is the new flash drive. be very careful to choose the correct drive, as dd
 WILL wipe all data from the destination!
