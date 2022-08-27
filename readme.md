@@ -21,7 +21,13 @@ secure data wiping.
 
 This tool supports ATA, SATA, and nvme drives, including drives using M.2 connectors.
 
-Super Drive Wipe supportd the following wipe methods:
+With many different types of drive sanitization available, and different drives
+supporting different methods, it can be difficult to manually determine which
+method can and should be used for a particular drive. Super Drive Wipe *automatically*
+queries the drive to determine which methods are are supported, and *automatically*
+sanitizes the drive with the best available methods. 
+
+Super Drive Wipe supports the following wipe methods:
 * SATA security-erase
 * SATA security-erase-enhanced
 * SATA sanitize block erase
