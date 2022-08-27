@@ -99,7 +99,7 @@ This tool is created by deepmagicbeginshere@gmail.com
 
 It consists of a Linux installation on the thumb drive which runs /usr/local/bin/wipe_drives
 on boot. This Linux uses the kernel and initrd modified from CentOS 7, but does not have RPM and yum.
-Developers may update the tool (such as for NVMe) by running the image as a virtual machine.
+Developers may update the tool by running the image as a virtual machine.
 The wipe script itself may also be edited from Windows by using Notepad, it exists as wipe_drives.txt 
 in the Windows-accessible partition.
 Additionally, updates can be performed by writing a shell script to the "update.txt" file.
