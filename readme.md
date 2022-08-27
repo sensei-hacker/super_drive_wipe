@@ -1,9 +1,10 @@
-Super Drive Wipe
-NIST 800-88 drive sanitization Tool version 1.1
+# Super Drive Wipe
+## NIST 800-88 drive sanitization Tool version 1.1
 
+https://github.com/sensei-hacker/super_drive_wipe
 Created by Ray Morris
 
--- Purpose this tool --
+## Purpose this tool
 This flash drive can be used to sanitize / wipe hard drives.
 This tool is compliant with NIST 800-88 and will use the strongest method
 available for each type of storage.
@@ -29,9 +30,9 @@ Super Drive Wipe supportd the following wipe methods:
 * NVME block erase
 * NVME crypto erase
 
-[screenshot of super drive wipe](ss_cropped.png)
+![screenshot of super drive wipe](ss_cropped.png)
 
---- Installation ---
+## Installation
 
 The easiest way to use the tool is to download the prebuilt boot image here:
 https://super-drive-wipe.s3.amazonaws.com/super-drive-wipe.rar
@@ -60,7 +61,7 @@ hdparm and nvme utils must be installed. If using your own existing Linux
 installation, it is important to be very careful not to wipe the wrong drive!
 
 
---- USAGE ---
+## USAGE
 
 Insert the flash drive containing this tool into the USB of a computer which is to be wiped.
 Boot to the flash drive. On Dell computers, you may press F12 during boot in order to 
@@ -78,7 +79,7 @@ On most SSDs, sanitization will take about 60 seconds or so. Rotating magnetic m
 take hours.
 
 
--- Copying this tool --
+## Copying this tool
 
 The easiest way to copy this bootable USB drive to use one copy of this bootable flash 
 drive to create a copy of itself. Simply boot from this existing drive and select 
@@ -86,13 +87,13 @@ the menu option to make another copy. The new flash drive on which you are insta
 must be at least 1GB.
 
 
--- Recovering Data Wiped by Super Drive Wipe --
+## Recovering Data Wiped by Super Drive Wipe
 Lol no.
 If you accidentally wiped the wrong drive, there is absolutely nothing anyone can do
 to recover the data from that drive. It's irretrievably gone. Maybe check your Onedrive
 or other cloud service to see if the data you need was also copied there.
 
--- Support and customizations for this tool --
+## Customizations for this tool
 This tool is created by deepmagicbeginshere@gmail.com
 
 It consists of a Linux installation on the thumb drive which runs /usr/local/bin/wipe_drives
@@ -102,4 +103,6 @@ The wipe script itself may also be edited from Windows by using Notepad, it exis
 in the Windows-accessible partition.
 Additionally, updates can be performed by writing a shell script to the "update.txt" file.
 That file will be run on each boot.
+
+https://github.com/sensei-hacker/super_drive_wipe
 
