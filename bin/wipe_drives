@@ -1,13 +1,20 @@
 #!/bin/sh
 
+sub_nnsa() {
+    scrub -p nnsa $1 &&
+    echo "Completed scrub with National Nuclear Security Administration (NNSA) patterns." &&
+    echo "You can now shut down the machine."
+}
+
 verify_ssd() {
     if dd if=$1 count=3 bs=512 status=noxfer 2>/dev/null | strings | grep rayrayray
     then
-        echo "Error sanitizing SSD $1, falling back to NSA overwrite"
-        scrub -p nssa $1
+        echo "Error sanitizing SSD $1, falling back to NNSA overwrite"
+        scrub_nnsa $1
     else
         tput setaf 2
         echo "Verified wipe of $1"
+        echo "You can now shut down the machine."
         tput sgr0
     fi
 }
@@ -26,7 +33,6 @@ wait_for_security_erase() {
         # fi
         sleep 30
     done
-    echo -e "\nSecurity-erase completed on $1"
     verify_ssd $1
 }
 
@@ -44,10 +50,10 @@ secure_erase() {
         fi
         if [ $? -ne 0 ]
         then
-            scrub -p nssa $1
+            scrub_nnsa $1
         fi
     else
-        scrub -p nssa $1
+        scrub_nnsa $1
     fi
 }
 
@@ -80,15 +86,15 @@ wait_nvme() {
         nvme sanitize-log "$1"
         sleep 3
     done
-    echo -e "\n$2 complete for $1"
+    echo -e "\n$2 complete for $1\n"
 }
 
 wipe_nvme() {
     if nvme id-ctrl $1 -H | grep -i 'crypto erase.*supported' | egrep -iv 'not supported' >/dev/null
     then
-    echo "performing crypto erase"
+        echo "performing crypto erase"
         nvme sanitize $1 -a 4
-    wait_nvme "$1" "crypto erase"
+        wait_nvme "$1" "crypto erase"
     fi
 
     if nvme id-ctrl $1 -H | grep -i 'block erase.*supported' | egrep -iv 'not supported' >/dev/null
@@ -99,8 +105,9 @@ wipe_nvme() {
     elif nvme id-ctrl "$1" -H | grep -i 'format support' >/dev/null
     then
         echo "performing format User Data Erase"
-        nvme format "$1" -s 1
+        nvme format "$1" -s 1 && echo "Completed NVME user data format."
     fi
+    verify_ssd $1
 }
 
 wipe_ssd() {
@@ -139,7 +146,7 @@ wipe_ssd() {
     verify_ssd $1
     if [ $wiped = 0 ]
     then
-        scrub -p nnsa $1
+        scrub_nnsa $1
     fi
 }
 
@@ -152,8 +159,8 @@ fix_freeze() {
     echo "suspendedsuspendedsuspended" > $1
     if [ "$suspend" = "n" ]
     then
-                echo "Proceeding with NSA wipe."
-        scrub -p nnsa $1
+        echo "Proceeding with NSA wipe."
+        scrub_nnsa $1
         return 0
     fi
         rtcwake -m mem -s 40
@@ -163,9 +170,9 @@ fix_freeze() {
     if hdparm -I $1 | egrep -v 'not.*fr' | grep frozen >/dev/null
     then
         echo "Drive is still frozen. Proceeding with NSA wipe."
-        scrub -p nssa $1
+        scrub_nnsa $1
     else
-                echo "Drive is unfrozen. Proceeding with optimal wipe."
+        echo "Drive is unfrozen. Proceeding with optimal wipe."
         wipe_ssd $1
     fi
 }
@@ -184,7 +191,7 @@ check_ssd() {
     then
         wipe_ssd "$1"
     else
-        scrub -p nssa $1
+        scrub_nnsa $1
     fi
 }
 
@@ -192,7 +199,7 @@ choose_wipe() {
     rota=`lsblk -d -n -p -o rota $1 | tr -d ' '`
     if [ "$rota" -eq 1 ]
     then
-        scrub -p nnsa $1
+        scrub_nnsa $1
     else
         check_ssd $1
     fi
@@ -352,4 +359,4 @@ do
 done
 
 
-df --output -BM  --output=source,size | grep sda 
+# df --output -BM  --output=source,size | grep sda 
