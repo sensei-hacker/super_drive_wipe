@@ -61,25 +61,26 @@ wait_for_security_erase() {
 
 secure_erase() {
     echo "Attempting security-erase"
+
+    success=0
     if hdparm --user-master u --security-set-pass p $1
     then
         if hdparm -I $1 | egrep -v 'not.*supported: enhanced' | grep 'supported: enhanced' >/dev/null
         then
             hdparm --user-master u --security-erase-enhanced p $1
             wait_for_security_erase $1
+            success=1
         else
             if timeout --kill-after=5 --preserve-status 60 hdparm --user-master u --security-erase p $1
             then
                 wait_for_security_erase $1
-            else
-               overwrite_choose_passes $1
+                success=1
             fi
         fi
-        if [ $? -ne 0 ]
-        then
-            overwrite_choose_passes $1
-        fi
-    else
+    fi
+
+    if [ success -eq 0 ]
+    then
         overwrite_choose_passes $1
     fi
 }
