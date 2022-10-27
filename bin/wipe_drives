@@ -236,7 +236,7 @@ display_drive() {
     read wipe
     if [ "$wipe" = "y" ]
     then
-        if dd if=$1 count=3 bs=512 status=noxfer 2>/dev/null | strings | grep rayrayray
+        if dd if=$1 count=3 bs=512 status=noxfer 2>/dev/null | strings | grep suspendedsuspended >/dev/null && hdparm -I $1 | egrep -v 'not.*froz' | grep frozen > /dev/null
         then
             hotplug_drive
         fi
