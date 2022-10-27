@@ -197,7 +197,7 @@ fix_freeze() {
 
 
 check_ssd() {
-    if hdparm -I $1 | egrep SECUR >/dev/null
+    if hdparm -I $1 | egrep -i SECUR >/dev/null
     then
         if hdparm -I $1 | egrep -v 'not.*fr' | grep frozen >/dev/null
         then
