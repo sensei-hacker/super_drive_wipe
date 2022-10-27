@@ -1,5 +1,13 @@
 #!/bin/sh
 
+thaw() {
+    device=`echo $1 | sed 's@/dev/@@'`
+    host=`ls -ld /sys/block/$device | tr / '\n' | grep host`
+    echo 1 > /sys/block/$device/device/delete
+    sleep 30
+    echo "- - - " >/sys/class/scsi_host/$host/scan
+}
+
 sub_nnsa() {
     scrub -p nnsa $1 &&
     echo "Completed scrub with National Nuclear Security Administration (NNSA) patterns." &&
@@ -151,22 +159,32 @@ wipe_ssd() {
 }
 
 fix_freeze() {
-    echo -e "\n$1 is frozen. The computer will suspend and re-awaken to thaw the drive."
+
+    echo -e "\n$1 is frozen. Attempting to un-freeze the drive. This will take about 40 seconds.\n...\n"
+    thaw $1
+    if hdparm -I $1 | egrep 'not.*fro' >/dev/null
+    then
+        return
+    fi
+
+    echo -e "\n$1 is still frozen. The computer can suspend and re-awaken to try to thaw the drive."
     echo "If the computer does not automatically awake from suspend after 60 seconds, tap the power button."
-        echo -e "If that doesn't work, hold down the power button to reboot the computer.\n"
+    echo -e "If that doesn't work, hold down the power button to reboot the computer.\n"
     echo -n "Suspend now? Say 'n' if you already tried suspend. (y/n): "
     read suspend
-    echo "suspendedsuspendedsuspended" > $1
     if [ "$suspend" = "n" ]
     then
         echo "Proceeding with NSA wipe."
         scrub_nnsa $1
         return 0
     fi
-        rtcwake -m mem -s 40
-        sleep 5
-        echo -e "\nSuspend and wake has completed."
-        echo "rayrayrayrayrayrayrayray" > $1
+
+    echo "suspendedsuspendedsuspended" > $1
+    rtcwake -m mem -s 40
+    sleep 5
+    echo -e "\nSuspend and wake has completed."
+    echo "rayrayrayrayrayrayrayray" > $1
+
     if hdparm -I $1 | egrep -v 'not.*fr' | grep frozen >/dev/null
     then
         echo "Drive is still frozen. Proceeding with NSA wipe."
